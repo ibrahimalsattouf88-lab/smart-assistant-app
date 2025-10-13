@@ -1,0 +1,32 @@
+workflows:
+  android-build:
+    name: Android Build (Smart Assistant)
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: latest
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+    scripts:
+      - name: Set up Flutter
+        script: | 
+          flutter clean
+          flutter pub get
+      - name: Build Android
+        script: | 
+          flutter build apk --release
+    artifacts:
+      - build/app/outputs/**/*.apk
+    publishing:
+      email:
+        recipients:
+          - ibrahimalsattouf88@gmail.com
+        notify:
+          success: true
+          failure: true
+
