@@ -15,6 +15,10 @@ workflows:
     scripts:
       - name: Set up Flutter
         script: | 
+          - name: Install specific CocoaPods version
+    script: |
+      gem install cocoapods -v 1.16.2
+
           flutter clean
           flutter pub get
       - name: Build Android
