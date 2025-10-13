@@ -4,7 +4,8 @@ workflows:
     environment:
       flutter: stable
       xcode: latest
-      cocoapods: 1.16.2 # Updated to force Codemagic sync
+      cocoapods: 1.16.2
+      java: 17
     triggering:
       events:
         - push
@@ -13,15 +14,14 @@ workflows:
           include: true
           source: true
     scripts:
-      - name: Install specific CocoaPods version
+      - name: Set up Flutter and Android
         script: |
-          gem install cocoapods -v 1.16.2
-      - name: Set up Flutter
-        script: | 
           flutter clean
           flutter pub get
+          flutter doctor -v
+          ./gradlew clean --no-daemon
       - name: Build Android
-        script: | 
+        script: |
           flutter build apk --release
     artifacts:
       - build/app/outputs/**/*.apk
@@ -32,3 +32,4 @@ workflows:
         notify:
           success: true
           failure: true
+
