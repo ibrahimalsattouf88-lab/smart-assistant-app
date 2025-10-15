@@ -2,23 +2,13 @@ pluginManagement {
     repositories {
         google()
         mavenCentral()
-        gradlePluginPortal()
+        gradlePluginPortal()   // مهم جداً لبلجن flutter-plugin-loader
     }
-    plugins {
-        id("com.android.application") version "8.9.1"
-        id("com.android.library") version "8.9.1"
-        id("org.jetbrains.kotlin.android") version "1.9.24"
-        id("dev.flutter.flutter-plugin-loader") version "1.0.0"
-    }
+    includeBuild("../.dart_tool/flutter_build")
 }
 
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        google()
-        mavenCentral()
-    }
+plugins {
+    id("dev.flutter.flutter-plugin-loader") version "1.0.0"
 }
 
-rootProject.name = "smart_assistant_app"
 include(":app")
