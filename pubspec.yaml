@@ -1,25 +1,17 @@
-name: smart_assistant_app
-description: Smart Assistant (4 tabs + VA mic)
-publish_to: "none"
-version: 1.0.0+1
-
-environment:
-  sdk: ">=3.3.0 <4.0.0"
-
 dependencies:
   flutter:
     sdk: flutter
+
+  # الشبكة والبيئة
   http: ^1.2.2
-  web_socket_channel: ^2.4.5
-  supabase_flutter: ^2.5.7
-  speech_to_text: ^6.6.2
-  permission_handler: ^11.3.1
   flutter_dotenv: ^5.1.0
 
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^4.0.0
+  # الأذونات والمايك
+  permission_handler: ^12.0.1
+  # (لا تضف permission_handler_android يدويًا؛ يجي ترانزيتيف)
 
-flutter:
-  uses-material-design: true
+  # التعرف الصوتي
+  speech_to_text: ^7.3.0
+
+  # واجهة
+  cupertino_icons: ^1.0.8
