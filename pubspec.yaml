@@ -1,21 +1,25 @@
-name: smart_assistant
-description: A new Flutter project for the Smart Assistant application.
-publish_to: 'none'
+name: smart_assistant_app
+description: Smart Assistant (4 tabs + VA mic)
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.2 # Using caret for flexible versioning
+  http: ^1.2.2
+  web_socket_channel: ^2.4.5
+  supabase_flutter: ^2.5.7
+  speech_to_text: ^6.6.2
+  permission_handler: ^11.3.1
+  flutter_dotenv: ^5.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  flutter_lints: ^4.0.0
 
 flutter:
   uses-material-design: true
-
