@@ -1,3 +1,12 @@
+name: smart_assistant_app
+description: Smart Assistant with VA button and ASR.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+  flutter: '>=3.22.0'
+
 dependencies:
   flutter:
     sdk: flutter
@@ -6,12 +15,20 @@ dependencies:
   http: ^1.2.2
   flutter_dotenv: ^5.1.0
 
-  # الأذونات والمايك
+  # الأذونات/المايك
   permission_handler: ^12.0.1
-  # (لا تضف permission_handler_android يدويًا؛ يجي ترانزيتيف)
 
   # التعرف الصوتي
   speech_to_text: ^7.3.0
 
-  # واجهة
   cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
