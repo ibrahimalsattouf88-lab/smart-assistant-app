@@ -1,0 +1,209 @@
+name: Bootstrap Smart Assistant (Flutter)
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clean repository
+        run: |
+          shopt -s dotglob
+          rm -rf -- * || true
+          mkdir -p .github/workflows
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.3"
+
+      - name: Create Flutter app
+        run: |
+          flutter create . --platforms=android
+          rm -rf test # نبسّط
+
+      - name: Override project files
+        run: |
+          cat > pubspec.yaml <<'YAML'
+          name: smart_assistant_app
+          description: Maeawin - Smart Assistant
+          version: 1.0.0+1
+          publish_to: "none"
+          environment:
+            sdk: '^3.9.0'
+          dependencies:
+            flutter:
+              sdk: flutter
+            flutter_dotenv: ^5.2.1
+            http: ^1.2.2
+          dev_dependencies:
+            flutter_test:
+              sdk: flutter
+            flutter_lints: ^4.0.0
+          flutter:
+            uses-material-design: true
+            assets:
+              - assets/
+          YAML
+
+          mkdir -p assets lib/src
+          cat > .env.example <<'ENV'
+          SUPABASE_URL=
+          SUPABASE_ANON_KEY=
+          VA_BASE=http://127.0.0.1:8080
+          OPENAI_API_KEY=
+          ENV
+
+          cat > lib/main.dart <<'DART'
+          import 'package:flutter/material.dart';
+          import 'package:flutter_dotenv/flutter_dotenv.dart';
+          import 'src/sections.dart';
+          import 'src/va_button.dart';
+
+          Future<void> main() async {
+            WidgetsFlutterBinding.ensureInitialized();
+            await dotenv.load(fileName: ".env");
+            runApp(const MaeawinApp());
+          }
+
+          class MaeawinApp extends StatelessWidget {
+            const MaeawinApp({super.key});
+            @override
+            Widget build(BuildContext context) {
+              return MaterialApp(
+                title: 'المعاون',
+                theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
+                home: const HomeScreen(),
+                debugShowCheckedModeBanner: false,
+              );
+            }
+          }
+
+          class HomeScreen extends StatefulWidget {
+            const HomeScreen({super.key});
+            @override
+            State<HomeScreen> createState() => _HomeScreenState();
+          }
+
+          class _HomeScreenState extends State<HomeScreen> {
+            int idx = 0;
+            static const _tabs = [
+              ('الرئيسية', Icons.home),
+              ('المحاسبة', Icons.calculate),
+              ('العملات', Icons.currency_exchange),
+              ('النصائح', Icons.lightbulb),
+              ('شخصي', Icons.person),
+            ];
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                appBar: AppBar(title: const Text('المعاون')),
+                body: IndexedStack(
+                  index: idx,
+                  children: const [
+                    SectionHome(), SectionAccounting(), SectionForex(), SectionAdvice(), SectionPersonal()
+                  ],
+                ),
+                floatingActionButton: const VAButton(),
+                bottomNavigationBar: NavigationBar(
+                  selectedIndex: idx,
+                  onDestinationSelected: (i)=>setState(()=>idx=i),
+                  destinations: [
+                    for (final t in _tabs) NavigationDestination(icon: Icon(t.$2), label: t.$1)
+                  ],
+                ),
+              );
+            }
+          }
+          DART
+
+          cat > lib/src/sections.dart <<'DART'
+          import 'package:flutter/material.dart';
+
+          class SectionHome extends StatelessWidget{
+            const SectionHome({super.key});
+            @override Widget build(BuildContext c)=> const Center(child: Text('واجهة بسيطة + لمحات استخدام'));
+          }
+          class SectionAccounting extends StatelessWidget{
+            const SectionAccounting({super.key});
+            @override Widget build(BuildContext c)=> const Center(child: Text('قسم المحاسبة'));
+          }
+          class SectionForex extends StatelessWidget{
+            const SectionForex({super.key});
+            @override Widget build(BuildContext c)=> const Center(child: Text('أسعار الصرف'));
+          }
+          class SectionAdvice extends StatelessWidget{
+            const SectionAdvice({super.key});
+            @override Widget build(BuildContext c)=> const Center(child: Text('نصائح ذكية'));
+          }
+          class SectionPersonal extends StatelessWidget{
+            const SectionPersonal({super.key});
+            @override Widget build(BuildContext c)=> const Center(child: Text('مساعد شخصي'));
+          }
+          DART
+
+          cat > lib/src/va_button.dart <<'DART'
+          import 'package:flutter/material.dart';
+          import 'package:flutter_dotenv/flutter_dotenv.dart';
+          import 'package:http/http.dart' as http;
+
+          class VAButton extends StatefulWidget{
+            const VAButton({super.key});
+            @override State<VAButton> createState()=>_VAButtonState();
+          }
+
+          class _VAButtonState extends State<VAButton>{
+            bool busy = false;
+            String? last;
+
+            Future<void> _ping() async {
+              final base = dotenv.env['VA_BASE'] ?? 'http://127.0.0.1:8080';
+              setState(()=>busy=true);
+              try{
+                final r = await http.get(Uri.parse('$base/health')).timeout(const Duration(seconds:8));
+                setState(()=>last = r.statusCode==200 ? 'VA OK' : 'VA ${r.statusCode}');
+              }catch(e){ setState(()=>last = 'VA offline'); }
+              finally{ setState(()=>busy=false); }
+            }
+
+            @override
+            Widget build(BuildContext context){
+              return FloatingActionButton.extended(
+                onPressed: busy ? null : _ping,
+                icon: busy ? const SizedBox(width:16,height:16,child:CircularProgressIndicator(strokeWidth:2)) : const Icon(Icons.mic),
+                label: Text(last ?? 'المساعد الصوتي'),
+              );
+            }
+          }
+          DART
+
+          # Gradle namespace fix (remove package attr if exists)
+          sed -i 's/ package="[^"]*"//g' android/app/src/main/AndroidManifest.xml || true
+
+          mkdir -p .github/workflows
+          cat > .github/workflows/android-ci.yml <<'YML'
+          name: Android Debug Build (Flutter)
+          on:
+            workflow_dispatch:
+            push: { branches: [ main ] }
+          jobs:
+            android_debug:
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                - uses: subosito/flutter-action@v2
+                  with: { flutter-version: "3.24.3" }
+                - run: flutter pub get
+                - run: flutter build apk --debug
+          YML
+
+      - name: Commit files
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "bootstrap: Smart Assistant v3.1"
