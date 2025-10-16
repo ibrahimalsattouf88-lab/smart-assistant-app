@@ -1,0 +1,6 @@
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="المعاون" android:icon="@mipmap/ic_launcher">
+        <activity android:name="com.google.firebase.MessagingUnityPlayerActivity" />
+    </application>
+</manifest>
