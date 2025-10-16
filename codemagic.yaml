@@ -1,0 +1,32 @@
+
+workflows:
+  smart_release:
+    name: Smart Assistant Release
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      groups:
+        - android_credentials # optional, if signing
+      vars:
+        FLUTTER_CHANNEL: stable
+        FLUTTER_VERSION: 3.24.0
+      flutter: $FLUTTER_VERSION
+      android: true
+    scripts:
+      - name: Setup Flutter
+        script: |
+          flutter --version
+      - name: Prepare env
+        script: |
+          echo "SUPABASE_URL=$CM_SUPABASE_URL" > .env
+          echo "SUPABASE_ANON_KEY=$CM_SUPABASE_ANON_KEY" >> .env
+          echo "VA_BASE_URL=$CM_VA_BASE_URL" >> .env
+      - name: Dependencies
+        script: |
+          flutter clean || true
+          flutter pub get || (flutter pub cache repair && flutter pub get)
+      - name: Build APK
+        script: |
+          flutter build apk --release || EXIT=$?;           if [ "$EXIT" != "0" ]; then             echo "[AutoFix] Layer1: retry without cache";             rm -f pubspec.lock; flutter clean; flutter pub get;             flutter build apk --release || EXIT=$?;           fi;           if [ "$EXIT" != "0" ]; then             echo "[AutoFix] Layer2: Gradle/AGP tune";             sed -i 's/compileSdk [0-9]\+/compileSdk 34/g' android/app/build.gradle || true;             ./scripts/autofix_gradle.sh || true;             flutter build apk --release;           fi
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk

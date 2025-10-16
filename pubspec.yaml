@@ -1,0 +1,20 @@
+
+name: smart_assistant_app
+description: Smart Assistant (user app) with 4 sections + VA button.
+publish_to: "none"
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
+  supabase_flutter: ^2.5.7
+  web_socket_channel: ^2.4.5
+  speech_to_text: ^6.6.2
+  permission_handler: ^11.3.1
+  flutter_dotenv: ^5.1.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  uses-material-design: true
