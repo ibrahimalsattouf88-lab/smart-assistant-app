@@ -11,10 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Clean repository
+      - name: Clean repository but keep .git/.github
+        shell: bash
         run: |
-          shopt -s dotglob
-          rm -rf -- * || true
+          shopt -s extglob dotglob
+          rm -rf -- !(.git|.github)
           mkdir -p .github/workflows
 
       - name: Setup Flutter
@@ -22,12 +23,13 @@ jobs:
         with:
           flutter-version: "3.24.3"
 
-      - name: Create Flutter app
+      - name: Create Flutter project (valid package name)
         run: |
-          flutter create . --platforms=android
-          rm -rf test # نبسّط
+          flutter create . --platforms=android --project-name smart_assistant_app
+          rm -rf test || true
 
       - name: Override project files
+        shell: bash
         run: |
           cat > pubspec.yaml <<'YAML'
           name: smart_assistant_app
@@ -125,27 +127,11 @@ jobs:
 
           cat > lib/src/sections.dart <<'DART'
           import 'package:flutter/material.dart';
-
-          class SectionHome extends StatelessWidget{
-            const SectionHome({super.key});
-            @override Widget build(BuildContext c)=> const Center(child: Text('واجهة بسيطة + لمحات استخدام'));
-          }
-          class SectionAccounting extends StatelessWidget{
-            const SectionAccounting({super.key});
-            @override Widget build(BuildContext c)=> const Center(child: Text('قسم المحاسبة'));
-          }
-          class SectionForex extends StatelessWidget{
-            const SectionForex({super.key});
-            @override Widget build(BuildContext c)=> const Center(child: Text('أسعار الصرف'));
-          }
-          class SectionAdvice extends StatelessWidget{
-            const SectionAdvice({super.key});
-            @override Widget build(BuildContext c)=> const Center(child: Text('نصائح ذكية'));
-          }
-          class SectionPersonal extends StatelessWidget{
-            const SectionPersonal({super.key});
-            @override Widget build(BuildContext c)=> const Center(child: Text('مساعد شخصي'));
-          }
+          class SectionHome extends StatelessWidget{ const SectionHome({super.key}); @override Widget build(BuildContext c)=> const Center(child: Text('واجهة بسيطة + لمحات استخدام')); }
+          class SectionAccounting extends StatelessWidget{ const SectionAccounting({super.key}); @override Widget build(BuildContext c)=> const Center(child: Text('قسم المحاسبة')); }
+          class SectionForex extends StatelessWidget{ const SectionForex({super.key}); @override Widget build(BuildContext c)=> const Center(child: Text('أسعار الصرف')); }
+          class SectionAdvice extends StatelessWidget{ const SectionAdvice({super.key}); @override Widget build(BuildContext c)=> const Center(child: Text('نصائح ذكية')); }
+          class SectionPersonal extends StatelessWidget{ const SectionPersonal({super.key}); @override Widget build(BuildContext c)=> const Center(child: Text('مساعد شخصي')); }
           DART
 
           cat > lib/src/va_button.dart <<'DART'
@@ -161,7 +147,6 @@ jobs:
           class _VAButtonState extends State<VAButton>{
             bool busy = false;
             String? last;
-
             Future<void> _ping() async {
               final base = dotenv.env['VA_BASE'] ?? 'http://127.0.0.1:8080';
               setState(()=>busy=true);
@@ -171,7 +156,6 @@ jobs:
               }catch(e){ setState(()=>last = 'VA offline'); }
               finally{ setState(()=>busy=false); }
             }
-
             @override
             Widget build(BuildContext context){
               return FloatingActionButton.extended(
@@ -183,10 +167,9 @@ jobs:
           }
           DART
 
-          # Gradle namespace fix (remove package attr if exists)
+          # Gradle namespace fix (لو كان في package بالمانيفست)
           sed -i 's/ package="[^"]*"//g' android/app/src/main/AndroidManifest.xml || true
 
-          mkdir -p .github/workflows
           cat > .github/workflows/android-ci.yml <<'YML'
           name: Android Debug Build (Flutter)
           on:
