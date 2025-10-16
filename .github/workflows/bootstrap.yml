@@ -1,4 +1,4 @@
-name: Bootstrap ManusVA
+name: Bootstrap Smart Assistant (Flutter)
 on:
   workflow_dispatch: {}
 
@@ -16,119 +16,177 @@ jobs:
         run: |
           shopt -s extglob dotglob
           rm -rf -- !(.git|.github)
-          mkdir -p .github/workflows src
+          mkdir -p .github/workflows
 
-      - name: Write project files
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.3"
+
+      - name: Create Flutter project (valid package name)
         run: |
-          cat > package.json <<'JSON'
-          {
-            "name": "manusva",
-            "private": true,
-            "type": "module",
-            "version": "3.1.0",
-            "scripts": {
-              "start": "node src/server.mjs",
-              "agent": "node manos-agent.mjs"
-            },
-            "dependencies": {
-              "express": "^4.19.2",
-              "cors": "^2.8.5",
-              "morgan": "^1.10.0",
-              "ws": "^8.17.1",
-              "node-fetch": "^3.3.2"
-            }
-          }
-          JSON
+          flutter create . --platforms=android --project-name smart_assistant_app
+          rm -rf test || true
 
+      - name: Override project files
+        shell: bash
+        run: |
+          cat > pubspec.yaml <<'YAML'
+          name: smart_assistant_app
+          description: Maeawin - Smart Assistant
+          version: 1.0.0+1
+          publish_to: "none"
+          environment:
+            sdk: '^3.9.0'
+          dependencies:
+            flutter:
+              sdk: flutter
+            flutter_dotenv: ^5.2.1
+            http: ^1.2.2
+          dev_dependencies:
+            flutter_test:
+              sdk: flutter
+            flutter_lints: ^4.0.0
+          flutter:
+            uses-material-design: true
+            assets:
+              - assets/
+          YAML
+
+          mkdir -p assets lib/src
           cat > .env.example <<'ENV'
           SUPABASE_URL=
           SUPABASE_ANON_KEY=
-          SUPABASE_SERVICE_ROLE_KEY=
+          VA_BASE=http://127.0.0.1:8080
           OPENAI_API_KEY=
-          MANOS_API_URL=https://api.manus.in/v1
-          MANOS_API_KEY=
-          VA_SERVER_URL=
-          VA_SIGNING_SECRET=
-          SENTRY_DSN=
-          NODE_ENV=production
-          PORT=8080
           ENV
 
-          cat > src/server.mjs <<'JS'
-          import express from 'express';
-          import cors from 'cors';
-          import morgan from 'morgan';
-          import { WebSocketServer } from 'ws';
+          cat > lib/main.dart <<'DART'
+          import 'package:flutter/material.dart';
+          import 'package:flutter_dotenv/flutter_dotenv.dart';
+          import 'src/sections.dart';
+          import 'src/va_button.dart';
 
-          const app = express();
-          app.use(cors());
-          app.use(express.json({limit:'2mb'}));
-          app.use(morgan('tiny'));
-          app.get('/health', (_,res)=>res.json({ok:true, ts: Date.now()}));
-
-          app.post('/va/start-session', (req,res)=> {
-            const { userId, deviceId, meta } = req.body||{};
-            res.json({ sessionId: cryptoRandom(), userId, deviceId, meta: meta||{} });
-          });
-          app.post('/va/append-transcript', (req,res)=> {
-            const { sessionId, content, language } = req.body||{};
-            res.json({ ok:true, sessionId, content, language: language||'ar' });
-          });
-          app.post('/va/end-session', (req,res)=> {
-            const { sessionId } = req.body||{};
-            res.json({ ok:true, sessionId, closed: true });
-          });
-
-          const server = app.listen(process.env.PORT||8080, ()=>{
-            console.log('VA server on', server.address().port);
-          });
-
-          const wss = new WebSocketServer({ server, path: '/va/realtime' });
-          wss.on('connection', ws => {
-            ws.on('message', msg => ws.send(JSON.stringify({ echo: msg.toString() })));
-            ws.send(JSON.stringify({ hello: 'realtime ok' }));
-          });
-
-          function cryptoRandom(){
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c=>{
-              const r = Math.random()*16|0, v = c === 'x' ? r : (r&0x3|0x8);
-              return v.toString(16);
-            });
+          Future<void> main() async {
+            WidgetsFlutterBinding.ensureInitialized();
+            await dotenv.load(fileName: ".env");
+            runApp(const MaeawinApp());
           }
-          JS
 
-          cat > manos-agent.mjs <<'JS'
-          import fetch from 'node-fetch';
-          const API = process.env.MANOS_API_URL || 'https://api.manus.in/v1';
-          const AUTH = process.env.MANOS_API_KEY ? { Authorization: `Bearer ${process.env.MANOS_API_KEY}` } : {};
-          console.log('Manos Agent started. API:', API);
-          async function run(){
-            try{
-              const r = await fetch(API + '/ops/poll', { headers: AUTH });
-              console.log('poll status', r.status);
-            }catch(e){ console.log('poll error', e.message); }
+          class MaeawinApp extends StatelessWidget {
+            const MaeawinApp({super.key});
+            @override
+            Widget build(BuildContext context) {
+              return MaterialApp(
+                title: 'المعاون',
+                theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
+                home: const HomeScreen(),
+                debugShowCheckedModeBanner: false,
+              );
+            }
           }
-          setInterval(run, 5000);
-          JS
 
-          cat > .github/workflows/run_agent.yml <<'YML'
-          name: Manos Agent — Pull & Execute Ops
-          on: { workflow_dispatch: {} }
+          class HomeScreen extends StatefulWidget {
+            const HomeScreen({super.key});
+            @override
+            State<HomeScreen> createState() => _HomeScreenState();
+          }
+
+          class _HomeScreenState extends State<HomeScreen> {
+            int idx = 0;
+            static const _tabs = [
+              ('الرئيسية', Icons.home),
+              ('المحاسبة', Icons.calculate),
+              ('العملات', Icons.currency_exchange),
+              ('النصائح', Icons.lightbulb),
+              ('شخصي', Icons.person),
+            ];
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                appBar: AppBar(title: const Text('المعاون')),
+                body: IndexedStack(
+                  index: idx,
+                  children: const [
+                    SectionHome(), SectionAccounting(), SectionForex(), SectionAdvice(), SectionPersonal()
+                  ],
+                ),
+                floatingActionButton: const VAButton(),
+                bottomNavigationBar: NavigationBar(
+                  selectedIndex: idx,
+                  onDestinationSelected: (i)=>setState(()=>idx=i),
+                  destinations: [
+                    for (final t in _tabs) NavigationDestination(icon: Icon(t.$2), label: t.$1)
+                  ],
+                ),
+              );
+            }
+          }
+          DART
+
+          cat > lib/src/sections.dart <<'DART'
+          import 'package:flutter/material.dart';
+          class SectionHome extends StatelessWidget{ const SectionHome({super.key}); @override Widget build(BuildContext c)=> const Center(child: Text('واجهة بسيطة + لمحات استخدام')); }
+          class SectionAccounting extends StatelessWidget{ const SectionAccounting({super.key}); @override Widget build(BuildContext c)=> const Center(child: Text('قسم المحاسبة')); }
+          class SectionForex extends StatelessWidget{ const SectionForex({super.key}); @override Widget build(BuildContext c)=> const Center(child: Text('أسعار الصرف')); }
+          class SectionAdvice extends StatelessWidget{ const SectionAdvice({super.key}); @override Widget build(BuildContext c)=> const Center(child: Text('نصائح ذكية')); }
+          class SectionPersonal extends StatelessWidget{ const SectionPersonal({super.key}); @override Widget build(BuildContext c)=> const Center(child: Text('مساعد شخصي')); }
+          DART
+
+          cat > lib/src/va_button.dart <<'DART'
+          import 'package:flutter/material.dart';
+          import 'package:flutter_dotenv/flutter_dotenv.dart';
+          import 'package:http/http.dart' as http;
+
+          class VAButton extends StatefulWidget{
+            const VAButton({super.key});
+            @override State<VAButton> createState()=>_VAButtonState();
+          }
+
+          class _VAButtonState extends State<VAButton>{
+            bool busy = false;
+            String? last;
+            Future<void> _ping() async {
+              final base = dotenv.env['VA_BASE'] ?? 'http://127.0.0.1:8080';
+              setState(()=>busy=true);
+              try{
+                final r = await http.get(Uri.parse('$base/health')).timeout(const Duration(seconds:8));
+                setState(()=>last = r.statusCode==200 ? 'VA OK' : 'VA ${r.statusCode}');
+              }catch(e){ setState(()=>last = 'VA offline'); }
+              finally{ setState(()=>busy=false); }
+            }
+            @override
+            Widget build(BuildContext context){
+              return FloatingActionButton.extended(
+                onPressed: busy ? null : _ping,
+                icon: busy ? const SizedBox(width:16,height:16,child:CircularProgressIndicator(strokeWidth:2)) : const Icon(Icons.mic),
+                label: Text(last ?? 'المساعد الصوتي'),
+              );
+            }
+          }
+          DART
+
+          # Gradle namespace fix (لو كان في package بالمانيفست)
+          sed -i 's/ package="[^"]*"//g' android/app/src/main/AndroidManifest.xml || true
+
+          cat > .github/workflows/android-ci.yml <<'YML'
+          name: Android Debug Build (Flutter)
+          on:
+            workflow_dispatch:
+            push: { branches: [ main ] }
           jobs:
-            run_agent:
+            android_debug:
               runs-on: ubuntu-latest
               steps:
                 - uses: actions/checkout@v4
-                - uses: actions/setup-node@v4
-                  with: { node-version: '20' }
-                - run: npm i
-                - run: node manos-agent.mjs
-                  env:
-                    MANOS_API_URL: ${{ secrets.MANOS_API_URL }}
-                    MANOS_API_KEY: ${{ secrets.MANOS_API_KEY }}
+                - uses: subosito/flutter-action@v2
+                  with: { flutter-version: "3.24.3" }
+                - run: flutter pub get
+                - run: flutter build apk --debug
           YML
 
       - name: Commit files
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "bootstrap: ManusVA v3.1"
+          commit_message: "bootstrap: Smart Assistant v3.1"
