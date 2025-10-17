@@ -1,0 +1,20 @@
+name: Build on meta trigger
+
+on:
+  repository_dispatch:
+    types: [trigger_from_meta]
+  workflow_dispatch:
+
+jobs:
+  codemagic:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kick Codemagic Pipeline
+        run: |
+          curl -X POST https://api.codemagic.io/builds \
+            -H "x-auth-token: ${{ secrets.CODEMAGIC_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+                  "appId": "${{ secrets.CODEMAGIC_APP_ID }}",
+                  "workflowId": "default"
+                }'
