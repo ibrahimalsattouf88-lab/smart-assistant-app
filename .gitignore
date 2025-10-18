@@ -1,0 +1,9 @@
+﻿build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.idea/
+.vscode/
+*.iml
+**/.env
+.env
