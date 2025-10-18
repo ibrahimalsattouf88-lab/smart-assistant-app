@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 ﻿import 'package:flutter/material.dart';
+=======
+import 'package:flutter/material.dart';
+>>>>>>> dca0643640c4a7f787f430aac91a36625b6f8a0c
 import '../services/realtime_tips.dart';
 
 class TipsBanner extends StatefulWidget {
